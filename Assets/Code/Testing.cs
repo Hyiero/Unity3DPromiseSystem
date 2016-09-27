@@ -6,45 +6,54 @@ public class Testing : MonoBehaviour
 {
     void Awake()
     {
-        //status is what we will pass into the method when we invoke it
-        //StartCoroutine(DoMoreStuff(success => Debug.Log(success), error => Debug.Log(error)));
-        PromiseStuff()
-            .Done(result => Debug.Log(result));
-
-        Func<string, string> myFunc = (a) =>
-         {
-             Debug.Log(a);
-             Debug.Log("Hello ");
-             return "Hello" + a;
-         };
-
-        Debug.Log(myFunc("World"));
+        PromiseToDoStuff()
+            .Then(ThenMethod,ErrorMessage)
+            .Then(SecondThenMethod)
+            .Done(DoneMethod);
     }
 
-    void Update()
-    {
-        //Debug.Log("Result: "+result);
-    }
-    public IEnumerator DoMoreStuff(Action<string> resolve)
+    public IEnumerator DoMoreStuff(Action<string> callback)
     {
         var success = true;
         yield return new WaitForSeconds(2);
 
         if (success)
-        {
-            resolve("Success");
-        }
+            callback("Success");
     }
 
-    public IPromise<string> PromiseStuff()
+    public IPromise PromiseToDoStuff()
     {
-        var promise = new Promise<string>();
-        StartCoroutine(DoMoreStuff(resolved => {
-            Debug.Log("This got called first with: "+resolved);
-            promise.Resolve(resolved);
+        var promise = new Promise();
+
+        StartCoroutine(DoMoreStuff(result => {
+            Debug.Log("Original Promise Resolved");
+            if (result == "Success")
+                promise.Resolve();
+            else
+                promise.Reject(new Exception("Something went very wrong"));
             }
         ));
 
         return promise;
+    }
+
+    public void ThenMethod()
+    {
+        Debug.Log("Then method fired");
+    }
+
+    public void SecondThenMethod()
+    {
+        Debug.Log("Then method number two is firing");
+    }
+
+    public void DoneMethod()
+    {
+        Debug.Log("Done method fired");
+    }
+
+    public void ErrorMessage(Exception message)
+    {
+        Debug.Log(message);
     }
 }
