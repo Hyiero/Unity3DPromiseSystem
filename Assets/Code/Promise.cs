@@ -49,7 +49,7 @@ public class Promise<PromisedT> : IPromise<PromisedT>
         resolveCallbacks.Add(resolveCallback);
     }
 
-    public IPromise<PromisedT> Then(Action<PromisedT> onResolved)
+    public IPromise<PromisedT> Done(Action<PromisedT> onResolved)
     {
         var promise = new Promise<PromisedT>();
 
@@ -57,4 +57,6 @@ public class Promise<PromisedT> : IPromise<PromisedT>
 
         return promise;
     }
+
+    //TODO: Make an overload for done that allows you to call a function 
 }

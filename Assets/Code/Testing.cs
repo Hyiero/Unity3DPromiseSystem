@@ -9,8 +9,16 @@ public class Testing : MonoBehaviour
         //status is what we will pass into the method when we invoke it
         //StartCoroutine(DoMoreStuff(success => Debug.Log(success), error => Debug.Log(error)));
         PromiseStuff()
-            .Then(result => Debug.Log(result))
-            .Then(result => Debug.Log("Last"));
+            .Done(result => Debug.Log(result));
+
+        Func<string, string> myFunc = (a) =>
+         {
+             Debug.Log(a);
+             Debug.Log("Hello ");
+             return "Hello" + a;
+         };
+
+        Debug.Log(myFunc("World"));
     }
 
     void Update()
