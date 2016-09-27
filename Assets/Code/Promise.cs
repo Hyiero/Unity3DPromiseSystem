@@ -2,17 +2,29 @@
 using System;
 using System.Collections.Generic;
 
-public class Promise<T> : IPromise<T>
+public class Promise<PromisedT> : IPromise<PromisedT>
 {
-    List<Action<T>> resolveCallbacks = new List<Action<T>>();
-    
-    public Promise(Action<T> resolveCallback)
+    List<Action<PromisedT>> resolveCallbacks { get; set; }
+
+    private PromisedT resolvedValue;
+
+    public enum PromiseState
     {
-        resolveCallbacks.Add(resolveCallback);
+        Pending,
+        Resolved,
+        Rejected
     }
 
-    public void Resolve(T variableToResolve)
+    public PromiseState currentState { get; private set; }
+
+    public Promise()
     {
+        this.currentState = PromiseState.Pending;
+    }
+
+    public void Resolve(PromisedT variableToResolve)
+    {
+        resolvedValue = variableToResolve; //This value will need to be passed into a chained methods
         foreach(var callback in resolveCallbacks)
         {
             callback(variableToResolve);
@@ -22,5 +34,27 @@ public class Promise<T> : IPromise<T>
     public void Reject()
     {
 
+    }
+
+    public void Done()
+    {
+
+    }
+
+    private void AddResolverHandlers(Action<PromisedT> resolveCallback)
+    {
+        if (resolveCallbacks == null)
+            resolveCallbacks = new List<Action<PromisedT>>();
+
+        resolveCallbacks.Add(resolveCallback);
+    }
+
+    public IPromise<PromisedT> Then(Action<PromisedT> onResolved)
+    {
+        var promise = new Promise<PromisedT>();
+
+        AddResolverHandlers(onResolved);
+
+        return promise;
     }
 }

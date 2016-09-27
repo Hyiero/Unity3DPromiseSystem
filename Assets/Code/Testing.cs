@@ -4,13 +4,13 @@ using System.Collections;
 
 public class Testing : MonoBehaviour 
 {
-    Hero horseHero;
     void Awake()
     {
-        horseHero = new Hero();
         //status is what we will pass into the method when we invoke it
         //StartCoroutine(DoMoreStuff(success => Debug.Log(success), error => Debug.Log(error)));
-        PromiseStuff();
+        PromiseStuff()
+            .Then(result => Debug.Log(result))
+            .Then(result => Debug.Log("Last"));
     }
 
     void Update()
@@ -30,26 +30,13 @@ public class Testing : MonoBehaviour
 
     public IPromise<string> PromiseStuff()
     {
-        var promise = new Promise<string>(result => Debug.Log(result));
-        StartCoroutine(DoMoreStuff(resolved => promise.Resolve(resolved)));
+        var promise = new Promise<string>();
+        StartCoroutine(DoMoreStuff(resolved => {
+            Debug.Log("This got called first with: "+resolved);
+            promise.Resolve(resolved);
+            }
+        ));
 
         return promise;
-    }
-
-    public void Load(string status,Func<string,string> resolve,Func<string,string> reject)
-    {
-        if (status == "Success")
-            resolve("We Succeed!");
-        else
-            reject("We Failed Bad!");
-    }
-}
-
-public class Hero
-{
-    public int level = 1;
-    public void LevelUp()
-    {
-        level++;
     }
 }
