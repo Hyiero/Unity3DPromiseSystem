@@ -50,7 +50,7 @@ public class Promise : IPromise
         this.currentState = PromiseState.Resolved;
 
         if(resolveHandlers != null)
-            resolveHandlers.ForEach(handler => InvokeResolveHandlers(handler.resolve,handler.resolvedPromise));
+            resolveHandlers.ForEach(handler => InvokeResolveHandler(handler.resolve,handler.resolvedPromise));
 
         ClearHandlers();
     }
@@ -62,7 +62,7 @@ public class Promise : IPromise
         rejectException = ex;
 
         if (rejectHandlers != null)
-            rejectHandlers.ForEach(handler => InvokeRejectHandlers(handler.reject,handler.rejectedPromise,ex));
+            rejectHandlers.ForEach(handler => InvokeRejectHandler(handler.reject,handler.rejectedPromise,ex));
 
         ClearHandlers();
     }
@@ -193,9 +193,9 @@ public class Promise : IPromise
     public void AddActionHandlers(IPromise promise,ResolveHandler resolveHandler,RejectHandler rejectHandler)
     {
         if (this.currentState == PromiseState.Resolved)
-            InvokeResolveHandlers(resolveHandler.resolve, resolveHandler.resolvedPromise);
+            InvokeResolveHandler(resolveHandler.resolve, resolveHandler.resolvedPromise);
         else if (this.currentState == PromiseState.Rejected)
-            InvokeRejectHandlers(rejectHandler.reject, rejectHandler.rejectedPromise,rejectException);
+            InvokeRejectHandler(rejectHandler.reject, rejectHandler.rejectedPromise,rejectException);
         else
         {
             AddResolveHandler(resolveHandler);
@@ -222,7 +222,7 @@ public class Promise : IPromise
     }
 
     //Will try and run the resolve callback. If there is an issue we will fire a reject for the promise with that exception
-    private void InvokeResolveHandlers(Action resolveCallback, IPromise promise)
+    private void InvokeResolveHandler(Action resolveCallback, IPromise promise)
     {
         try
         {
@@ -235,7 +235,7 @@ public class Promise : IPromise
     }
 
     //Will try and run the reject callback. If there is an issue we will fire a reject for the promise with that exception
-    private void InvokeRejectHandlers(Action<Exception> rejectCallback, IPromise promise, Exception rejectedEx)
+    private void InvokeRejectHandler(Action<Exception> rejectCallback, IPromise promise, Exception rejectedEx)
     {
         try
         {

@@ -6,14 +6,14 @@ public class Testing : MonoBehaviour
 {
     void Awake()
     {
-         PromiseToDoStuff()
+         /*PromiseToDoStuff()
              .Then((Func<IPromise>)DoThatThing)
              .Then((Action)SecondThenMethod,ErrorMessage)
-             .Done(DoneMethod);
+             .Done(DoneMethod);*/
 
         GenericPromise()
-            .Then(result => AddThingsToGether(result))
-            .Done(newResult => FinalOutput(newResult));
+            .Then(result => AddThingsToGether(result), ErrorMessage)
+            .Done(newResult => FinalOutput(newResult), ErrorMessage); //Need to write Done from IGenericPromise<PromiseElement> to IPromise
     }
 
     public IGenericPromise<int> GenericPromise()
@@ -21,7 +21,8 @@ public class Testing : MonoBehaviour
         var promise = new GenericPromise<int>();
 
         StartCoroutine(SecondPromise(result => {
-            promise.Resolve(result);
+            // promise.Resolve(result);
+            promise.Reject(new Exception("This is not good"));
         }));
 
         return promise;
@@ -35,7 +36,7 @@ public class Testing : MonoBehaviour
         Debug.Log("Before Adding: " + result);
         Debug.Log("After Adding: " + newNumber);
 
-        StartCoroutine(DoMoreStuff(finalResult => promise.Resolve(finalResult)));
+        StartCoroutine(DoMoreStuff(finalResult => promise.Reject(new Exception("This is not good"))));
 
         return promise;
     }
@@ -110,9 +111,6 @@ public class Testing : MonoBehaviour
 
     public void ErrorMessage(Exception message)
     {
-        if(message != null)
-        {
-            //Show error alert box
-        }
+        Debug.Log(message);
     }
 }

@@ -28,7 +28,7 @@ public class GenericPromise<PromisedElement> : IGenericPromise<PromisedElement>,
 
     public List<GenericRejectHandler> rejectHandlers { get; set; }
 
-    public Exception rejectedException { get; set; }
+    public Exception rejectException { get; set; }
 
     #region Resolve and Reject Handlers
     public struct GenericResolveHandler
@@ -64,11 +64,18 @@ public class GenericPromise<PromisedElement> : IGenericPromise<PromisedElement>,
     {
         this.currentState = PromisedState.Rejected;
 
+        rejectException = ex;
+
         if (rejectHandlers != null)
             rejectHandlers.ForEach(handler => InvokeRejectHandler(handler.reject, handler.rejectedPromise));
     }
 
     public IGenericPromise<PromisedElement> Then(Action<PromisedElement> onResolve)
+    {
+        return Then(onResolve, null);
+    }
+
+    public IGenericPromise<PromisedElement> Then(Action<PromisedElement> onResolve, Action<Exception> onReject)
     {
         var resultPromise = new GenericPromise<PromisedElement>();
 
@@ -80,12 +87,28 @@ public class GenericPromise<PromisedElement> : IGenericPromise<PromisedElement>,
             resultPromise.Resolve(promisedElement);
         };
 
-        AddResolveHandler(CreateResolveHandler(resolvedAction, resultPromise));
+        Action<Exception> rejectedAction = (ex) =>
+        {
+            if (onReject != null)
+                onReject(ex);
+
+            resultPromise.Reject(ex);
+        };
+
+        var resolveHandler = CreateResolveHandler(resolvedAction, resultPromise);
+        var rejectHandler = CreateRejectHandler(rejectedAction, resultPromise);
+
+        AddActionHandlers(resultPromise, resolveHandler, rejectHandler);
 
         return resultPromise;
     }
 
     public IGenericPromise<ConvertedT> Then<ConvertedT>(Func<PromisedElement, IGenericPromise<ConvertedT>> onResolve)
+    {
+        return Then(onResolve, null);
+    }
+
+    public IGenericPromise<ConvertedT> Then<ConvertedT>(Func<PromisedElement, IGenericPromise<ConvertedT>> onResolve, Action<Exception> onReject)
     {
         var resultPromise = new GenericPromise<ConvertedT>();
 
@@ -94,47 +117,82 @@ public class GenericPromise<PromisedElement> : IGenericPromise<PromisedElement>,
             if (onResolve != null)
             {
                 onResolve(PromisedElement)
-                    .Then((ConvertedT chainValue) => resultPromise.Resolve(chainValue));
+                    .Then((ConvertedT chainValue) => resultPromise.Resolve(chainValue),
+                    ex => resultPromise.Reject(ex));
             }
         };
 
-        var resolveHandler = CreateResolveHandler(resolvedAction, resultPromise);
+        Action<Exception> rejectedAction = (ex) =>
+        {
+            if (onReject != null)
+                onReject(ex);
 
-        AddActionHandlers(resultPromise, resolveHandler);
+            resultPromise.Reject(ex);
+        };
+
+        var resolveHandler = CreateResolveHandler(resolvedAction, resultPromise);
+        var rejectHandler = CreateRejectHandler(rejectedAction, resultPromise);
+
+        AddActionHandlers(resultPromise, resolveHandler, rejectHandler);
 
         return resultPromise;
     }
 
     public void Done(Action<PromisedElement> onResolve, Action<Exception> onReject)
     {
-        Then(onResolve);
-        //OnError Chain
+        Then(onResolve)
+            .OnError(ex => new Exception("Something went wrong during in the promise stack"));
     }
 
     public void Done(Action<PromisedElement> onResolve)
     {
-        Then(onResolve);
-        //OnError Chain
+        Then(onResolve)
+            .OnError(ex => new Exception("Something went wrong during in the promise stack"));
     }
 
     public void Done()
     {
-        //OnError Goes here
+        OnError(ex => new Exception("Something went wrong during in the promise stack"));
     }
 
-    public static IGenericPromise<PromisedElement> Resolved(PromisedElement promisedValue)
+    public IGenericPromise<PromisedElement> OnError(Action<Exception> onError)
+    {
+        var resultPromise = new GenericPromise<PromisedElement>();
+
+        Action<PromisedElement> resolveAction = (promiseElement) =>
+        {
+            resultPromise.Resolve(promiseElement);
+        };
+
+        Action<Exception> rejectedAction = (ex) =>
+        {
+            if (onError != null)
+                onError(ex);
+
+            resultPromise.Reject(ex);
+        };
+
+        var resolveHandler = CreateResolveHandler(resolveAction, resultPromise);
+        var rejectHandler = CreateRejectHandler(rejectedAction, resultPromise);
+
+        AddActionHandlers(resultPromise, resolveHandler, rejectHandler);
+
+        return resultPromise;
+    }
+
+  /*public static IGenericPromise<PromisedElement> Resolved(PromisedElement promisedValue)
     {
         var promise = new GenericPromise<PromisedElement>();
         promise.Resolve(promisedValue);
         return promise;
-    }
+    }*/
 
     #region Helper Methods
     public void InvokeRejectHandler(Action<Exception> rejectCallback, IRejectable promise)
     {
         try
         {
-            rejectCallback(rejectedException);
+            rejectCallback(rejectException);
         }
         catch(Exception ex)
         {
@@ -157,16 +215,16 @@ public class GenericPromise<PromisedElement> : IGenericPromise<PromisedElement>,
 
     //This will add the handlers to the resolved/rejected handler lists unless the current promise is already resolved/rejected, at which point it is more efficient 
     //to fire off the resolve/reject
-    public void AddActionHandlers(IRejectable promise, GenericResolveHandler resolveHandler)//, RejectHandler rejectHandler)
+    public void AddActionHandlers(IRejectable promise, GenericResolveHandler resolveHandler, GenericRejectHandler rejectHandler)
     {
         if (this.currentState == PromisedState.Resolved)
             InvokeResolveHandler(resolveHandler.resolve, resolveHandler.resolvedPromise, resolvedValue);
-        //else if (this.currentState == PromisedState.Rejected)
-         //   InvokeRejectHandler(rejectHandler.reject, rejectHandler.rejectedPromise, rejectException);
+        else if (this.currentState == PromisedState.Rejected)
+            InvokeRejectHandler(rejectHandler.reject, rejectHandler.rejectedPromise);
         else
         {
             AddResolveHandler(resolveHandler);
-            //AddRejectHandler(rejectHandler);
+            AddRejectHandler(rejectHandler);
         }
     }
 
