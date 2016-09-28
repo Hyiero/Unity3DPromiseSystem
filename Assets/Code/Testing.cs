@@ -23,6 +23,8 @@ public class Testing : MonoBehaviour
 
     void Update()
     {
+        Debug.Log("Stuff");
+
         if(t <= 300)
         {
             t++;
@@ -54,14 +56,19 @@ public class Testing : MonoBehaviour
         Debug.Log("Before Adding: " + result);
         Debug.Log("After Adding: " + newNumber);
 
-        done += (data) =>
+        /*  done += (data) =>
+          {
+              done = null;
+              promise.Resolve(data);
+          };*/
+
+     /*   for (int i = 0; i < 1000; i++)
         {
-            done = null;
-            promise.Resolve(data);
-        };
+            Debug.Log("Counting");
+        }*/
 
 
-        //StartCoroutine(coroutinueFunction(promise));
+        StartCoroutine(coroutinueFunction(promise));
         //StartCoroutine(DoMoreStuff(finalResult => promise.Reject(new Exception("This is not good"))));
 
         Debug.Log("Promise returned");
