@@ -4,6 +4,11 @@ using System.Collections;
 
 public class Testing : MonoBehaviour 
 {
+    public delegate void DoneHandler(string value);
+    public event DoneHandler done;
+
+    int t = 0;
+
     void Awake()
     {
          /*PromiseToDoStuff()
@@ -13,7 +18,20 @@ public class Testing : MonoBehaviour
 
         GenericPromise()
             .Then(result => AddThingsToGether(result), ErrorMessage)
-            .Done(newResult => FinalOutput(newResult), ErrorMessage); //Need to write Done from IGenericPromise<PromiseElement> to IPromise
+            .Done(newResult => FinalOutput(newResult)); //Need to write Done from IGenericPromise<PromiseElement> to IPromise
+    }
+
+    void Update()
+    {
+        if(t <= 300)
+        {
+            t++;
+        }
+        else
+        {
+            if (done != null)
+                done("Fired updated in event that resolved a promise somewhere");
+        }
     }
 
     public IGenericPromise<int> GenericPromise()
@@ -21,8 +39,8 @@ public class Testing : MonoBehaviour
         var promise = new GenericPromise<int>();
 
         StartCoroutine(SecondPromise(result => {
-            // promise.Resolve(result);
-            promise.Reject(new Exception("This is not good"));
+             promise.Resolve(result);
+            //promise.Reject(new Exception("This is not good"));
         }));
 
         return promise;
@@ -36,9 +54,27 @@ public class Testing : MonoBehaviour
         Debug.Log("Before Adding: " + result);
         Debug.Log("After Adding: " + newNumber);
 
-        StartCoroutine(DoMoreStuff(finalResult => promise.Reject(new Exception("This is not good"))));
+        done += (data) =>
+        {
+            done = null;
+            promise.Resolve(data);
+        };
 
+
+        //StartCoroutine(coroutinueFunction(promise));
+        //StartCoroutine(DoMoreStuff(finalResult => promise.Reject(new Exception("This is not good"))));
+
+        Debug.Log("Promise returned");
         return promise;
+    }
+
+    public IEnumerator coroutinueFunction(GenericPromise<string> promise)
+    {
+        while(t < 300)
+        {
+            yield return null;
+        }
+        promise.Resolve("Successfully resolved");
     }
 
     public void FinalOutput(string finalResult)
