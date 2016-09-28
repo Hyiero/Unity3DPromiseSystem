@@ -3,28 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 
-#region Resolve and Reject Handlers
-public struct ResolveHandler
-{
-    public Action resolve { get; set; }
-
-    public IPromise resolvedPromise { get; set; }
-}
-
-public struct RejectHandler
-{
-    public Action<Exception> reject { get; set; }
-
-    public IPromise rejectedPromise { get; set; }
-}
-
-#endregion
 /// <summary>
 /// Non Generic promises can not have a resolved value, they just have the idea of "Being Finished" with a async operation. So the chained Operation can then fire off
 /// </summary>
 public class Promise : IPromise
 {
-
     public List<ResolveHandler> resolveHandlers { get; set; }
 
     public List<RejectHandler> rejectHandlers { get; set; }
@@ -32,6 +15,23 @@ public class Promise : IPromise
     public PromiseState currentState { get; set; }
 
     public Exception rejectException { get; set; }
+
+    #region Resolve and Reject Handlers
+    public struct ResolveHandler
+    {
+        public Action resolve { get; set; }
+
+        public IPromise resolvedPromise { get; set; }
+    }
+
+    public struct RejectHandler
+    {
+        public Action<Exception> reject { get; set; }
+
+        public IPromise rejectedPromise { get; set; }
+    }
+
+    #endregion
 
     public enum PromiseState
     {
@@ -101,11 +101,70 @@ public class Promise : IPromise
 
         return resultPromise;
     }
-    
+
+    //This allows for Promises to resolve other promises allowing for multiple async calls to be fired in a row. This is an Overload that has no reject
+    public IPromise Then(Func<IPromise> onResolve)
+    {
+        return Then(onResolve, null);
+    }
+
+    //This allows for Promises to resolve other promises allowing for multiple async calls to be fired in a row.
+    public IPromise Then(Func<IPromise> onResolve, Action<Exception> onReject)
+    {
+        var resultPromise = new Promise();
+
+        Action resolveAction = () =>
+        {
+            if (onResolve != null)
+            {
+                //After the promise we pass invokes and resolves we must makes sure we resolve this promise after that one, not at the same time
+                onResolve().
+                    Then(() => resultPromise.Resolve(), ex => resultPromise.Reject(ex));
+            }
+            else
+                resultPromise.Resolve();
+        };
+
+        Action<Exception> rejectedAction = ex =>
+        {
+            if (onReject != null)
+                onReject(ex);
+            //For reject we dont care that they happen in order.
+            resultPromise.Reject(ex);
+        };
+
+        var resolveHandler = CreateResolveHandler(resolveAction, resultPromise);
+        var rejectHandler = CreateRejectHandler(rejectedAction, resultPromise);
+
+        AddActionHandlers(resultPromise, resolveHandler, rejectHandler);
+
+        return resultPromise;
+    }
+
     //OnError we will add in a Reject to the reject action handler as well as set the state to the current promise as rejected.
     public IPromise OnError(Action<Exception> onError)
     {
-        return Then(null, onError);
+        var resultPromise = new Promise();
+
+        Action resolveAction = () =>
+        {
+            resultPromise.Resolve();
+        };
+
+        Action<Exception> rejectedAction = (ex) =>
+        {
+            if (onError != null)
+                onError(ex);
+
+            resultPromise.Reject(ex);
+        };
+
+        var resolveHandler = CreateResolveHandler(resolveAction, resultPromise);
+        var rejectHandler = CreateRejectHandler(rejectedAction, resultPromise);
+
+        AddActionHandlers(resultPromise, resolveHandler, rejectHandler);
+
+        return resultPromise;
     }
 
     //Overloaded done method which can both a method for onResolve as well as a onReject method. Adds its own default error handling 
