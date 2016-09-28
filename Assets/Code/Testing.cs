@@ -11,13 +11,13 @@ public class Testing : MonoBehaviour
 
     void Awake()
     {
-         /*PromiseToDoStuff()
-             .Then((Func<IPromise>)DoThatThing)
-             .Then((Action)SecondThenMethod,ErrorMessage)
-             .Done(DoneMethod);*/
+        /*PromiseToDoStuff()
+            .Then((Func<IPromise>)DoThatThing)
+            .Then((Action)SecondThenMethod,ErrorMessage)
+            .Done(DoneMethod);*/
 
         GenericPromise()
-            .Then(result => AddThingsToGether(result), ErrorMessage)
+            .Then(result => AddThingsToGether(result)).OnError((ex) => Debug.Log(ex))
             .Done(newResult => FinalOutput(newResult)); //Need to write Done from IGenericPromise<PromiseElement> to IPromise
     }
 
@@ -41,8 +41,8 @@ public class Testing : MonoBehaviour
         var promise = new GenericPromise<int>();
 
         StartCoroutine(SecondPromise(result => {
-             promise.Resolve(result);
-            //promise.Reject(new Exception("This is not good"));
+             //promise.Resolve(result);
+            promise.Reject(new Exception("This is not good"));
         }));
 
         return promise;
